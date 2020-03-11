@@ -1,261 +1,327 @@
-// 🚀 Fiber is an Express.js inspired web framework written in Go with 💖
-// 📌 Please open an issue if you got suggestions or found a bug!
-// 🖥 Links: https://github.com/gofiber/fiber, https://fiber.wiki
-
-// 🦸 Not all heroes wear capes, thank you to some amazing people
-// 💖 @valyala, @erikdubbelboer, @savsgio, @julienschmidt, @koddr
+// 🚀 Fiber is an Express inspired web framework written in Go with 💖
+// 📌 API Documentation: https://fiber.wiki
+// 📝 Github Repository: https://github.com/gofiber/fiber
 
 package fiber
 
 import (
-	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 
+	websocket "github.com/fasthttp/websocket"
 	fasthttp "github.com/valyala/fasthttp"
 )
 
-// Ctx is the context that contains everything
-type Ctx struct {
-	route    *Route
-	next     bool
-	error    error
-	params   *[]string
-	values   []string
-	Fasthttp *fasthttp.RequestCtx
-}
-
 // Route struct
 type Route struct {
-	// HTTP method in uppercase, can be a * for Use() & All()
-	Method string
-	// Stores the original path
-	Path string
-	// Bool that defines if the route is a Use() middleware
-	Midware bool
-	// wildcard bool is for routes without a path, * and /*
-	Wildcard bool
-	// Stores compiled regex special routes :params, *wildcards, optionals?
-	Regex *regexp.Regexp
-	// Store params if special routes :params, *wildcards, optionals?
-	Params []string
-	// Callback function for specific route
-	Handler func(*Ctx)
+	isMiddleware bool // is middleware route
+	isWebSocket  bool // is websocket route
+
+	isStar  bool // path == '*'
+	isSlash bool // path == '/'
+	isRegex bool // needs regex parsing
+
+	Method string         // http method
+	Path   string         // orginal path
+	Params []string       // path params
+	Regexp *regexp.Regexp // regexp matcher
+
+	HandleCtx  func(*Ctx)  // ctx handler
+	HandleConn func(*Conn) // conn handler
+
 }
 
-// Ctx pool
-var poolCtx = sync.Pool{
-	New: func() interface{} {
-		return new(Ctx)
-	},
-}
-
-// Get new Ctx from pool
-func acquireCtx(fctx *fasthttp.RequestCtx) *Ctx {
-	ctx := poolCtx.Get().(*Ctx)
-	ctx.Fasthttp = fctx
-	return ctx
-}
-
-// Return Context to pool
-func releaseCtx(ctx *Ctx) {
-	ctx.route = nil
-	ctx.next = false
-	ctx.error = nil
-	ctx.params = nil
-	ctx.values = nil
-	ctx.Fasthttp = nil
-	poolCtx.Put(ctx)
-}
-
-func (grp *Group) register(method string, args ...interface{}) {
-	path := grp.path
-	var handler func(*Ctx)
-	if len(args) == 1 {
-		handler = args[0].(func(*Ctx))
-	} else if len(args) > 1 {
-		path = path + args[0].(string)
-		handler = args[1].(func(*Ctx))
-		if path[0] != '/' && path[0] != '*' {
-			path = "/" + path
-		}
-		path = strings.Replace(path, "//", "/", -1)
-		path = filepath.Clean(path)
-		path = filepath.ToSlash(path)
-	}
-	grp.app.register(method, path, handler)
-}
-
-// Function to add a route correctly
-func (app *Application) register(method string, args ...interface{}) {
-	// Set if method is Use() midware
-	var midware = method == "USE"
-
-	// Match any method
-	if method == "ALL" || midware {
-		method = "*"
-	}
-
-	// Prepare possible variables
-	var path string        // We could have a path/prefix
-	var handler func(*Ctx) // We could have a ctx handler
-
-	// Only 1 argument, so no path/prefix
-	if len(args) == 1 {
-		handler = args[0].(func(*Ctx))
-	} else if len(args) > 1 {
-		path = args[0].(string)
-		handler = args[1].(func(*Ctx))
-		if path == "" || path[0] != '/' && path[0] != '*' {
-			path = "/" + path
-		}
-	}
-
-	if midware && strings.Contains(path, "/:") {
-		log.Fatal("Router: You cannot use :params in Use()")
-	}
-
-	// If Use() path == "/", match anything aka *
-	if midware && path == "/" {
-		path = "*"
-	}
-
-	// If the route needs to match any path
-	if path == "" || path == "*" || path == "/*" {
-		app.routes = append(app.routes, &Route{method, path, midware, true, nil, nil, handler})
-		return
-	}
-
-	// Get params from path
-	params := getParams(path)
-
-	// If path has no params (simple path), we don't need regex (also for use())
-	if midware || len(params) == 0 {
-		app.routes = append(app.routes, &Route{method, path, midware, false, nil, nil, handler})
-		return
-	}
-
-	// We have parametes, so we need to compile regex from the path
-	regex, err := getRegex(path)
-	if err != nil {
-		log.Fatal("Router: Invalid url pattern: " + path)
-	}
-
-	// Add regex + params to route
-	app.routes = append(app.routes, &Route{method, path, midware, false, regex, params, handler})
-}
-
-// then try to match a route as efficient as possible.
-func (app *Application) handler(fctx *fasthttp.RequestCtx) {
-	found := false
-
-	// get custom context from sync pool
-	ctx := acquireCtx(fctx)
-
-	// get path and method from main context
-	path := ctx.Path()
-	method := ctx.Method()
-
-	if app.recover != nil {
-		defer func() {
-			if r := recover(); r != nil {
-				ctx.error = fmt.Errorf("panic: %v", r)
-				app.recover(ctx)
-			}
-		}()
-	}
-
-	// loop trough routes
-	for _, route := range app.routes {
-		// Skip route if method is not allowed
-		if route.Method != "*" && route.Method != method {
-			continue
-		}
-
-		// First check if we match a wildcard or static path
-		if route.Wildcard || route.Path == path {
-			// if route.wildcard || (route.path == path && route.params == nil) {
-			// If * always set the path to the wildcard parameter
-			if route.Wildcard {
-				ctx.params = &[]string{"*"}
-				ctx.values = make([]string, 1)
-				ctx.values[0] = path
-			}
-			found = true
-			// Set route pointer if user wants to call .Route()
+func (app *App) nextRoute(ctx *Ctx) {
+	lenr := len(app.routes) - 1
+	for ctx.index < lenr {
+		ctx.index++
+		route := app.routes[ctx.index]
+		match, values := route.matchRoute(ctx.method, ctx.path)
+		if match {
 			ctx.route = route
-			// Execute handler with context
-			route.Handler(ctx)
-			// if next is not set, leave loop and release ctx
-			if !ctx.next {
-				break
+			if !ctx.matched {
+				ctx.matched = true
 			}
-			// set next to false for next iteration
-			ctx.next = false
-			// continue to go to the next route
-			continue
-		}
-
-		// If route is Use() and path starts with route.path
-		// aka strings.HasPrefix(route.path, path)
-		if route.Midware && strings.HasPrefix(path, route.Path) {
-			found = true
-			ctx.route = route
-			route.Handler(ctx)
-			if !ctx.next {
-				break
+			if len(values) > 0 {
+				ctx.values = values
 			}
-			ctx.next = false
-			continue
-		}
-
-		// Skip route if regex does not exist
-		if route.Regex == nil {
-			continue
-		}
-
-		// Skip route if regex does not match
-		if !route.Regex.MatchString(path) {
-			continue
-		}
-
-		// If we have parameters, lets find the matches
-		if len(route.Params) > 0 {
-			matches := route.Regex.FindAllStringSubmatch(path, -1)
-			// If we have matches, add params and values to context
-			if len(matches) > 0 && len(matches[0]) > 1 {
-				ctx.params = &route.Params
-				// ctx.values = make([]string, len(*ctx.params))
-				ctx.values = matches[0][1:len(matches[0])]
+			if route.isWebSocket {
+				if err := websocketUpgrader.Upgrade(ctx.Fasthttp, func(fconn *websocket.Conn) {
+					conn := acquireConn(fconn)
+					defer releaseConn(conn)
+					route.HandleConn(conn)
+				}); err != nil { // Upgrading failed
+					ctx.SendStatus(400)
+				}
+			} else {
+				route.HandleCtx(ctx)
 			}
+			return
 		}
-
-		found = true
-
-		// Set route pointer if user wants to call .Route()
-		ctx.route = route
-
-		// Execute handler with context
-		route.Handler(ctx)
-
-		// if next is not set, leave loop and release ctx
-		if !ctx.next {
-			break
-		}
-
-		// set next to false for next iteration
-		ctx.next = false
 	}
-
-	// No routes found
-	if !found {
-		// Custom 404 handler?
+	if !ctx.matched {
 		ctx.SendStatus(404)
 	}
+}
 
-	// release context back into sync pool
-	releaseCtx(ctx)
+func (r *Route) matchRoute(method, path string) (match bool, values []string) {
+	// is route middleware? matches all http methods
+	if r.isMiddleware {
+		// '*' or '/' means its a valid match
+		if r.isStar || r.isSlash {
+			return true, nil
+		}
+		// if midware path starts with req.path
+		if strings.HasPrefix(path, r.Path) {
+			return true, nil
+		}
+		// middlewares dont support regex so bye!
+		return false, nil
+	}
+	// non-middleware route, http method must match!
+	// the wildcard method is for .All() method
+	if r.Method != method && r.Method[0] != '*' {
+		return false, nil
+	}
+	// '*' means we match anything
+	if r.isStar {
+		return true, nil
+	}
+	// simple '/' bool, so you avoid unnecessary comparison for long paths
+	if r.isSlash && path == "/" {
+		return true, nil
+	}
+	// does this route need regex matching?
+	if r.isRegex {
+		// req.path match regex pattern
+		if r.Regexp.MatchString(path) {
+			// do we have parameters
+			if len(r.Params) > 0 {
+				// get values for parameters
+				matches := r.Regexp.FindAllStringSubmatch(path, -1)
+				// did we get the values?
+				if len(matches) > 0 && len(matches[0]) > 1 {
+					values = matches[0][1:len(matches[0])]
+					return true, values
+				}
+				return false, nil
+			}
+			return true, nil
+		}
+		return false, nil
+	}
+	// last thing to do is to check for a simple path match
+	if r.Path == path {
+		return true, nil
+	}
+	// Nothing match
+	return false, nil
+}
+
+func (app *App) handler(fctx *fasthttp.RequestCtx) {
+	// get fiber context from sync pool
+	ctx := acquireCtx(fctx)
+	defer releaseCtx(ctx)
+
+	// attach app poiner and compress settings
+	ctx.app = app
+	ctx.compress = app.Settings.Compression
+
+	// Case sensitive routing
+	if !app.Settings.CaseSensitive {
+		ctx.path = strings.ToLower(ctx.path)
+	}
+	// Strict routing
+	if !app.Settings.StrictRouting && len(ctx.path) > 1 {
+		ctx.path = strings.TrimRight(ctx.path, "/")
+	}
+
+	app.nextRoute(ctx)
+
+	if ctx.compress {
+		compressResponse(fctx)
+	}
+}
+
+func (app *App) registerMethod(method, path string, handlers ...func(*Ctx)) {
+	// Route requires atleast one handler
+	if len(handlers) == 0 {
+		log.Fatalf("Missing handler in route")
+	}
+	// Cannot have an empty path
+	if path == "" {
+		path = "/"
+	}
+	// Path always start with a '/' or '*'
+	if path[0] != '/' && path[0] != '*' {
+		path = "/" + path
+	}
+
+	// Case sensitive routing, all to lowercase
+	if !app.Settings.CaseSensitive {
+		path = strings.ToLower(path)
+	}
+	// Strict routing, remove last `/`
+	if !app.Settings.StrictRouting && len(path) > 1 {
+		path = strings.TrimRight(path, "/")
+	}
+
+	// Set route booleans
+	var isMiddleware = method == "USE"
+	// Middleware / All allows all HTTP methods
+	if isMiddleware || method == "ALL" {
+		method = "*"
+	}
+	var isStar = path == "*" || path == "/*"
+	// Middleware containing only a `/` equals wildcard
+	if isMiddleware && path == "/" {
+		isStar = true
+	}
+	var isSlash = path == "/"
+	var isRegex = false
+	// Route properties
+	var Params = getParams(path)
+	var Regexp *regexp.Regexp
+	// Params requires regex pattern
+	if len(Params) > 0 {
+		regex, err := getRegex(path)
+		if err != nil {
+			log.Fatal("Router: Invalid path pattern: " + path)
+		}
+		isRegex = true
+		Regexp = regex
+	}
+	for i := range handlers {
+		app.routes = append(app.routes, &Route{
+			isMiddleware: isMiddleware,
+			isStar:       isStar,
+			isSlash:      isSlash,
+			isRegex:      isRegex,
+			Method:       method,
+			Path:         path,
+			Params:       Params,
+			Regexp:       Regexp,
+			HandleCtx:    handlers[i],
+		})
+	}
+}
+
+func (app *App) registerWebSocket(method, path string, handle func(*Conn)) {
+	// Cannot have an empty path
+	if path == "" {
+		path = "/"
+	}
+	// Path always start with a '/' or '*'
+	if path[0] != '/' && path[0] != '*' {
+		path = "/" + path
+	}
+
+	// Case sensitive routing, all to lowercase
+	if !app.Settings.CaseSensitive {
+		path = strings.ToLower(path)
+	}
+	// Strict routing, remove last `/`
+	if !app.Settings.StrictRouting && len(path) > 1 {
+		path = strings.TrimRight(path, "/")
+	}
+
+	var isWebSocket = true
+
+	var isStar = path == "*" || path == "/*"
+	var isSlash = path == "/"
+	var isRegex = false
+	// Route properties
+	var Params = getParams(path)
+	var Regexp *regexp.Regexp
+	// Params requires regex pattern
+	if len(Params) > 0 {
+		regex, err := getRegex(path)
+		if err != nil {
+			log.Fatal("Router: Invalid path pattern: " + path)
+		}
+		isRegex = true
+		Regexp = regex
+	}
+	app.routes = append(app.routes, &Route{
+		isWebSocket: isWebSocket,
+		isStar:      isStar,
+		isSlash:     isSlash,
+		isRegex:     isRegex,
+
+		Method:     method,
+		Path:       path,
+		Params:     Params,
+		Regexp:     Regexp,
+		HandleConn: handle,
+	})
+}
+
+func (app *App) registerStatic(prefix, root string) {
+	// Cannot have an empty prefix
+	if prefix == "" {
+		prefix = "/"
+	}
+	// prefix always start with a '/' or '*'
+	if prefix[0] != '/' && prefix[0] != '*' {
+		prefix = "/" + prefix
+	}
+	// Case sensitive routing, all to lowercase
+	if !app.Settings.CaseSensitive {
+		prefix = strings.ToLower(prefix)
+	}
+
+	var isStar = prefix == "*" || prefix == "/*"
+
+	files := map[string]string{}
+	// Clean root path
+	root = filepath.Clean(root)
+	// Check if root exist and is accessible
+	if _, err := os.Stat(root); err != nil {
+		log.Fatalf("%s", err)
+	}
+	// Store path url and file paths in map
+	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			url := "*"
+			if !isStar {
+				// /css/style.css: static/css/style.css
+				url = filepath.Join(prefix, strings.Replace(path, root, "", 1))
+			}
+			// \static\css: /static/css
+			url = filepath.ToSlash(url)
+			files[url] = path
+			if filepath.Base(path) == "index.html" {
+				files[url] = path
+			}
+		}
+		return err
+	}); err != nil {
+		log.Fatalf("%s", err)
+	}
+	compress := app.Settings.Compression
+	app.routes = append(app.routes, &Route{
+		isMiddleware: true,
+		isStar:       isStar,
+		Method:       "*",
+		Path:         prefix,
+		HandleCtx: func(c *Ctx) {
+			// Only allow GET & HEAD methods
+			if c.method == "GET" || c.method == "HEAD" {
+				path := "*"
+				if !isStar {
+					path = c.path
+				}
+				file := files[path]
+				if file != "" {
+					c.SendFile(file, compress)
+					return
+				}
+			}
+			c.matched = false
+			c.Next()
+		},
+	})
 }

@@ -1,9 +1,6 @@
-// 🚀 Fiber is an Express.js inspired web framework written in Go with 💖
-// 📌 Please open an issue if you got suggestions or found a bug!
-// 🖥 Links: https://github.com/gofiber/fiber, https://fiber.wiki
-
-// 🦸 Not all heroes wear capes, thank you to some amazing people
-// 💖 @valyala, @erikdubbelboer, @savsgio, @julienschmidt, @koddr
+// 🚀 Fiber is an Express inspired web framework written in Go with 💖
+// 📌 API Documentation: https://fiber.wiki
+// 📝 Github Repository: https://github.com/gofiber/fiber
 
 package fiber
 
@@ -13,18 +10,39 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strings"
 	"time"
 	"unsafe"
 
+	websocket "github.com/fasthttp/websocket"
 	schema "github.com/gorilla/schema"
+	fasthttp "github.com/valyala/fasthttp"
 )
 
 var schemaDecoder = schema.NewDecoder()
+var compressResponse = fasthttp.CompressHandlerLevel(func(c *fasthttp.RequestCtx) {}, fasthttp.CompressDefaultCompression)
+var websocketUpgrader = websocket.FastHTTPUpgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(fctx *fasthttp.RequestCtx) bool {
+		return true
+	},
+}
+
+func groupPaths(prefix, path string) string {
+	if path == "/" {
+		path = ""
+	}
+	path = prefix + path
+	path = strings.Replace(path, "//", "/", -1)
+	return path
+}
 
 func getParams(path string) (params []string) {
+	if len(path) < 1 {
+		return
+	}
 	segments := strings.Split(path, "/")
 	replacer := strings.NewReplacer(":", "", "?", "")
 	for _, s := range segments {
@@ -32,11 +50,12 @@ func getParams(path string) (params []string) {
 			continue
 		} else if s[0] == ':' {
 			params = append(params, replacer.Replace(s))
-		} else if s[0] == '*' {
+		}
+		if strings.Contains(s, "*") {
 			params = append(params, "*")
 		}
 	}
-	return params
+	return
 }
 
 func getRegex(path string) (*regexp.Regexp, error) {
@@ -63,21 +82,20 @@ func getRegex(path string) (*regexp.Regexp, error) {
 	return regex, err
 }
 
-func getFiles(root string) (files []string, isDir bool, err error) {
+func getFiles(root string) (files []string, dir bool, err error) {
 	root = filepath.Clean(root)
-	// Check if dir/file exists
 	if _, err := os.Lstat(root); err != nil {
-		return files, isDir, fmt.Errorf("%s", err)
+		return files, dir, fmt.Errorf("%s", err)
 	}
 	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
 			files = append(files, path)
 		} else {
-			isDir = true
+			dir = true
 		}
 		return err
 	})
-	return files, isDir, err
+	return
 }
 
 func getType(ext string) (mime string) {
@@ -85,70 +103,67 @@ func getType(ext string) (mime string) {
 		return mime
 	}
 	if ext[0] == '.' {
-		ext = ext[1:]
+		mime = extensionMIME[ext[1:]]
+	} else {
+		mime = extensionMIME[ext]
 	}
-	mime = mimeTypes[ext]
 	if mime == "" {
-		return mimeApplicationOctetStream
+		return MIMEOctetStream
 	}
 	return mime
-}
-
-func getStatus(status int) (msg string) {
-	return statusMessages[status]
 }
 
 // #nosec G103
 // getString converts byte slice to a string without memory allocation.
 // See https://groups.google.com/forum/#!msg/Golang-Nuts/ENgbUzYvCuU/90yGx7GUAgAJ .
-func getString(b []byte) string {
+var getString = func(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
 
 // #nosec G103
 // getBytes converts string to a byte slice without memory allocation.
 // See https://groups.google.com/forum/#!msg/Golang-Nuts/ENgbUzYvCuU/90yGx7GUAgAJ .
-func getBytes(s string) (b []byte) {
-	// return *(*[]byte)(unsafe.Pointer(&s))
-	sh := *(*reflect.StringHeader)(unsafe.Pointer(&s))
-	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	bh.Data, bh.Len, bh.Cap = sh.Data, sh.Len, sh.Len
-	return b
+var getBytes = func(s string) (b []byte) {
+	return *(*[]byte)(unsafe.Pointer(&s))
 }
 
-// Check for error and format
-// func checkErr(err error, title ...string) {
-// 	if err != nil {
-// 		t := "Error"
-// 		if len(title) > 0 {
-// 			t = title[0]
-// 		}
-// 		fmt.Printf("\n%s%s: %v%s\n\n", "\x1b[1;30m", t, err, "\x1b[0m")
-// 		os.Exit(1)
-// 	}
-// }
-
 // https://golang.org/src/net/net.go#L113
-// Helper methods for Testing
-type conn struct {
+// Helper methods for application#test
+type testConn struct {
 	net.Conn
 	r bytes.Buffer
 	w bytes.Buffer
 }
 
-func (c *conn) RemoteAddr() net.Addr {
+func (c *testConn) RemoteAddr() net.Addr {
 	return &net.TCPAddr{
 		IP: net.IPv4(0, 0, 0, 0),
 	}
 }
-func (c *conn) LocalAddr() net.Addr                { return c.LocalAddr() }
-func (c *conn) Read(b []byte) (int, error)         { return c.r.Read(b) }
-func (c *conn) Write(b []byte) (int, error)        { return c.w.Write(b) }
-func (c *conn) Close() error                       { return nil }
-func (c *conn) SetDeadline(t time.Time) error      { return nil }
-func (c *conn) SetReadDeadline(t time.Time) error  { return nil }
-func (c *conn) SetWriteDeadline(t time.Time) error { return nil }
+func (c *testConn) LocalAddr() net.Addr                { return c.RemoteAddr() }
+func (c *testConn) Read(b []byte) (int, error)         { return c.r.Read(b) }
+func (c *testConn) Write(b []byte) (int, error)        { return c.w.Write(b) }
+func (c *testConn) Close() error                       { return nil }
+func (c *testConn) SetDeadline(t time.Time) error      { return nil }
+func (c *testConn) SetReadDeadline(t time.Time) error  { return nil }
+func (c *testConn) SetWriteDeadline(t time.Time) error { return nil }
 
+// MIME types
+const (
+	MIMEApplicationJSON       = "application/json"
+	MIMEApplicationJavaScript = "application/javascript"
+	MIMEApplicationXML        = "application/xml"
+	MIMETextXML               = "text/xml"
+	MIMEApplicationForm       = "application/x-www-form-urlencoded"
+	MIMEApplicationProtobuf   = "application/protobuf"
+	MIMEApplicationMsgpack    = "application/msgpack"
+	MIMETextHTML              = "text/html"
+	MIMETextPlain             = "text/plain"
+	MIMEMultipartForm         = "multipart/form-data"
+	MIMEOctetStream           = "application/octet-stream"
+)
+
+// HTTP status codes with messages
 var statusMessages = map[int]string{
 	100: "Continue",
 	101: "Switching Protocols",
@@ -212,18 +227,8 @@ var statusMessages = map[int]string{
 	511: "Network Authentication Required",
 }
 
-const (
-	mimeApplicationJSON        = "application/json"
-	mimeApplicationJavascript  = "application/javascript"
-	mimeApplicationXML         = "application/xml"
-	mimeTextXML                = "text/xml"
-	mimeApplicationOctetStream = "application/octet-stream"
-	mimeApplicationForm        = "application/x-www-form-urlencoded"
-	mimeMultipartForm          = "multipart/form-data"
-)
-
-// https://github.com/nginx/nginx/blob/master/conf/mime.types
-var mimeTypes = map[string]string{
+// File extensions MIME types
+var extensionMIME = map[string]string{
 	"html":    "text/html",
 	"htm":     "text/html",
 	"shtml":   "text/html",
@@ -330,3 +335,167 @@ var mimeTypes = map[string]string{
 	"wmv":     "video/x-ms-wmv",
 	"avi":     "video/x-msvideo",
 }
+
+// HTTP Headers
+const (
+	// Authentication
+	HeaderAuthorization      = "Authorization"
+	HeaderProxyAuthenticate  = "Proxy-Authenticate"
+	HeaderProxyAuthorization = "Proxy-Authorization"
+	HeaderWWWAuthenticate    = "WWW-Authenticate"
+
+	// Caching
+	HeaderAge           = "Age"
+	HeaderCacheControl  = "Cache-Control"
+	HeaderClearSiteData = "Clear-Site-Data"
+	HeaderExpires       = "Expires"
+	HeaderPragma        = "Pragma"
+	HeaderWarning       = "Warning"
+
+	// Client hints
+	HeaderAcceptCH         = "Accept-CH"
+	HeaderAcceptCHLifetime = "Accept-CH-Lifetime"
+	HeaderContentDPR       = "Content-DPR"
+	HeaderDPR              = "DPR"
+	HeaderEarlyData        = "Early-Data"
+	HeaderSaveData         = "Save-Data"
+	HeaderViewportWidth    = "Viewport-Width"
+	HeaderWidth            = "Width"
+
+	// Conditionals
+	HeaderETag              = "ETag"
+	HeaderIfMatch           = "If-Match"
+	HeaderIfModifiedSince   = "If-Modified-Since"
+	HeaderIfNoneMatch       = "If-None-Match"
+	HeaderIfUnmodifiedSince = "If-Unmodified-Since"
+	HeaderLastModified      = "Last-Modified"
+	HeaderVary              = "Vary"
+
+	// Connection management
+	HeaderConnection = "Connection"
+	HeaderKeepAlive  = "Keep-Alive"
+
+	// Content negotiation
+	HeaderAccept         = "Accept"
+	HeaderAcceptCharset  = "Accept-Charset"
+	HeaderAcceptEncoding = "Accept-Encoding"
+	HeaderAcceptLanguage = "Accept-Language"
+
+	// Controls
+	HeaderCookie      = "Cookie"
+	HeaderExpect      = "Expect"
+	HeaderMaxForwards = "Max-Forwards"
+	HeaderSetCookie   = "Set-Cookie"
+
+	// CORS
+	HeaderAccessControlAllowCredentials = "Access-Control-Allow-Credentials"
+	HeaderAccessControlAllowHeaders     = "Access-Control-Allow-Headers"
+	HeaderAccessControlAllowMethods     = "Access-Control-Allow-Methods"
+	HeaderAccessControlAllowOrigin      = "Access-Control-Allow-Origin"
+	HeaderAccessControlExposeHeaders    = "Access-Control-Expose-Headers"
+	HeaderAccessControlMaxAge           = "Access-Control-Max-Age"
+	HeaderAccessControlRequestHeaders   = "Access-Control-Request-Headers"
+	HeaderAccessControlRequestMethod    = "Access-Control-Request-Method"
+	HeaderOrigin                        = "Origin"
+	HeaderTimingAllowOrigin             = "Timing-Allow-Origin"
+	HeaderXPermittedCrossDomainPolicies = "X-Permitted-Cross-Domain-Policies"
+
+	// Do Not Track
+	HeaderDNT = "DNT"
+	HeaderTk  = "Tk"
+
+	// Downloads
+	HeaderContentDisposition = "Content-Disposition"
+
+	// Message body information
+	HeaderContentEncoding = "Content-Encoding"
+	HeaderContentLanguage = "Content-Language"
+	HeaderContentLength   = "Content-Length"
+	HeaderContentLocation = "Content-Location"
+	HeaderContentType     = "Content-Type"
+
+	// Proxies
+	HeaderForwarded       = "Forwarded"
+	HeaderVia             = "Via"
+	HeaderXForwardedFor   = "X-Forwarded-For"
+	HeaderXForwardedHost  = "X-Forwarded-Host"
+	HeaderXForwardedProto = "X-Forwarded-Proto"
+
+	// Redirects
+	HeaderLocation = "Location"
+
+	// Request context
+	HeaderFrom           = "From"
+	HeaderHost           = "Host"
+	HeaderReferer        = "Referer"
+	HeaderReferrerPolicy = "Referrer-Policy"
+	HeaderUserAgent      = "User-Agent"
+
+	// Response context
+	HeaderAllow  = "Allow"
+	HeaderServer = "Server"
+
+	// Range requests
+	HeaderAcceptRanges = "Accept-Ranges"
+	HeaderContentRange = "Content-Range"
+	HeaderIfRange      = "If-Range"
+	HeaderRange        = "Range"
+
+	// Security
+	HeaderContentSecurityPolicy           = "Content-Security-Policy"
+	HeaderContentSecurityPolicyReportOnly = "Content-Security-Policy-Report-Only"
+	HeaderCrossOriginResourcePolicy       = "Cross-Origin-Resource-Policy"
+	HeaderExpectCT                        = "Expect-CT"
+	HeaderFeaturePolicy                   = "Feature-Policy"
+	HeaderPublicKeyPins                   = "Public-Key-Pins"
+	HeaderPublicKeyPinsReportOnly         = "Public-Key-Pins-Report-Only"
+	HeaderStrictTransportSecurity         = "Strict-Transport-Security"
+	HeaderUpgradeInsecureRequests         = "Upgrade-Insecure-Requests"
+	HeaderXContentTypeOptions             = "X-Content-Type-Options"
+	HeaderXDownloadOptions                = "X-Download-Options"
+	HeaderXFrameOptions                   = "X-Frame-Options"
+	HeaderXPoweredBy                      = "X-Powered-By"
+	HeaderXXSSProtection                  = "X-XSS-Protection"
+
+	// Server-sent event
+	HeaderLastEventID = "Last-Event-ID"
+	HeaderNEL         = "NEL"
+	HeaderPingFrom    = "Ping-From"
+	HeaderPingTo      = "Ping-To"
+	HeaderReportTo    = "Report-To"
+
+	// Transfer coding
+	HeaderTE               = "TE"
+	HeaderTrailer          = "Trailer"
+	HeaderTransferEncoding = "Transfer-Encoding"
+
+	// WebSockets
+	HeaderSecWebSocketAccept     = "Sec-WebSocket-Accept"
+	HeaderSecWebSocketExtensions = "Sec-WebSocket-Extensions"
+	HeaderSecWebSocketKey        = "Sec-WebSocket-Key"
+	HeaderSecWebSocketProtocol   = "Sec-WebSocket-Protocol"
+	HeaderSecWebSocketVersion    = "Sec-WebSocket-Version"
+
+	// Other
+	HeaderAcceptPatch         = "Accept-Patch"
+	HeaderAcceptPushPolicy    = "Accept-Push-Policy"
+	HeaderAcceptSignature     = "Accept-Signature"
+	HeaderAltSvc              = "Alt-Svc"
+	HeaderDate                = "Date"
+	HeaderIndex               = "Index"
+	HeaderLargeAllocation     = "Large-Allocation"
+	HeaderLink                = "Link"
+	HeaderPushPolicy          = "Push-Policy"
+	HeaderRetryAfter          = "Retry-After"
+	HeaderServerTiming        = "Server-Timing"
+	HeaderSignature           = "Signature"
+	HeaderSignedHeaders       = "Signed-Headers"
+	HeaderSourceMap           = "SourceMap"
+	HeaderUpgrade             = "Upgrade"
+	HeaderXDNSPrefetchControl = "X-DNS-Prefetch-Control"
+	HeaderXPingback           = "X-Pingback"
+	HeaderXRequestID          = "X-Request-ID"
+	HeaderXRequestedWith      = "X-Requested-With"
+	HeaderXRobotsTag          = "X-Robots-Tag"
+	HeaderXUACompatible       = "X-UA-Compatible"
+)

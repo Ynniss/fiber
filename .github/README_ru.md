@@ -1,34 +1,40 @@
 <p align="center">
   <a href="https://fiber.wiki">
-    <img alt="Fiber" height="100" src="https://github.com/gofiber/docs/blob/master/static/logo.svg">
+    <img alt="Fiber" height="125" src="https://github.com/gofiber/docs/blob/master/static/fiber_v2_logo.svg">
   </a>
-  <br><br>
+  <br>
   <a href="https://github.com/gofiber/fiber/blob/master/.github/README.md">
-    <img height="20px" src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.4.6/flags/4x3/gb.svg">
+    <img height="20px" src="https://github.com/gofiber/docs/blob/master/static/flags/en.svg">
   </a>
   <!--<a href="https://github.com/gofiber/fiber/blob/master/.github/README_ru.md">
-    <img height="20px" src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.4.6/flags/4x3/ru.svg">
+    <img height="20px" src="https://github.com/gofiber/docs/blob/master/static/flags/ru.svg">
   </a>-->
   <a href="https://github.com/gofiber/fiber/blob/master/.github/README_es.md">
-    <img height="20px" src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.4.6/flags/4x3/es.svg">
+    <img height="20px" src="https://github.com/gofiber/docs/blob/master/static/flags/es.svg">
   </a>
   <a href="https://github.com/gofiber/fiber/blob/master/.github/README_ja.md">
-    <img height="20px" src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.4.6/flags/4x3/jp.svg">
+    <img height="20px" src="https://github.com/gofiber/docs/blob/master/static/flags/jp.svg">
   </a>
   <a href="https://github.com/gofiber/fiber/blob/master/.github/README_pt.md">
-    <img height="20px" src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.4.6/flags/4x3/pt.svg">
+    <img height="20px" src="https://github.com/gofiber/docs/blob/master/static/flags/pt.svg">
   </a>
   <a href="https://github.com/gofiber/fiber/blob/master/.github/README_zh-CN.md">
-    <img height="20px" src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.4.6/flags/4x3/cn.svg">
+    <img height="20px" src="https://github.com/gofiber/docs/blob/master/static/flags/ch.svg">
   </a>
   <a href="https://github.com/gofiber/fiber/blob/master/.github/README_de.md">
-    <img height="20px" src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.4.6/flags/4x3/de.svg">
+    <img height="20px" src="https://github.com/gofiber/docs/blob/master/static/flags/de.svg">
   </a>
   <a href="https://github.com/gofiber/fiber/blob/master/.github/README_ko.md">
-    <img height="20px" src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.4.6/flags/4x3/kr.svg">
+    <img height="20px" src="https://github.com/gofiber/docs/blob/master/static/flags/ko.svg">
   </a>
   <a href="https://github.com/gofiber/fiber/blob/master/.github/README_fr.md">
-    <img height="20px" src="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/3.4.6/flags/4x3/fr.svg">
+    <img height="20px" src="https://github.com/gofiber/docs/blob/master/static/flags/fr.svg">
+  </a>
+  <a href="https://github.com/gofiber/fiber/blob/master/.github/README_tr.md">
+    <img height="20px" src="https://github.com/gofiber/docs/blob/master/static/flags/tr.svg">
+  </a>
+  <a href="https://github.com/gofiber/fiber/blob/master/.github/README_id.md">
+    <img height="20px" src="https://github.com/gofiber/docs/blob/master/static/flags/id.svg">
   </a>
   <br><br>
   <a href="https://github.com/gofiber/fiber/releases">
@@ -36,6 +42,9 @@
   </a>
   <a href="https://fiber.wiki">
     <img src="https://img.shields.io/badge/api-documentation-blue?style=flat-square">
+  </a>
+  <a href="https://pkg.go.dev/github.com/gofiber/fiber?tab=doc">
+    <img src="https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square">
   </a>
   <a href="#">
     <img src="https://img.shields.io/badge/goreport-A%2B-brightgreen?style=flat-square">
@@ -77,14 +86,12 @@ func main() {
 
 ## ⚙️ Установка
 
-Прежде всего, [скачайте](https://golang.org/dl/) и установите Go.
+Прежде всего, [скачайте](https://golang.org/dl/) и установите Go. Версия **1.11** или выше.
 
-> Go **1.11** (с включенными [модулями Go](https://golang.org/doc/go1.11#modules)) или выше.
-
-Установка выполняется с помощью команды [`go get`](https://golang.org/cmd/go/#hdr-Add_dependencies_to_current_module_and_install_them) :
+Установка выполняется с помощью команды [`go get`](https://golang.org/cmd/go/#hdr-Add_dependencies_to_current_module_and_install_them):
 
 ```bash
-go get -u github.com/gofiber/fiber
+go get -u github.com/gofiber/fiber/...
 ```
 
 ## 🤖 Бенчмарки
@@ -102,10 +109,10 @@ go get -u github.com/gofiber/fiber
 - Доступ к [статичным файлам](https://fiber.wiki/application#static)
 - Экстремальная [производительность](https://fiber.wiki/benchmarks)
 - [Низкий объем потребления памяти](https://fiber.wiki/benchmarks)
-- [Эндпоинты](https://fiber.wiki/context) Express [API](https://fiber.wiki/context)
+- [Эндпоинты](https://fiber.wiki/context), как в [API](https://fiber.wiki/context) Express
 - Middleware и поддержка [Next](https://fiber.wiki/context#next)
 - [Быстрое](https://dev.to/koddr/welcome-to-fiber-an-express-js-styled-fastest-web-framework-written-with-on-golang-497) программирование на стороне сервера
-- Available in [5 languages](https://fiber.wiki/)
+- Переведен на 9 других языков
 - И многое другое, [посетите наш Wiki](https://fiber.wiki/)
 
 ## 💡 Философия
@@ -114,32 +121,19 @@ go get -u github.com/gofiber/fiber
 
 Fiber **вдохновлен** Express, самым популярным веб фреймворком в Интернете. Мы объединили **простоту** Express и **чистую производительность** Go. Если вы когда-либо реализовывали веб-приложение на Node.js (*с использованием Express или аналогичного фреймворка*), то многие методы и принципы покажутся вам **очень знакомыми**.
 
+Мы **прислушиваемся** к нашим пользователям в [issues](https://github.com/gofiber/fiber/issues) (_и остальном Интернете_), чтобы создать **быстрый**, **гибкий** и **дружелюбный** веб фреймворк на Go для **любых** задач, **дедлайнов** и **уровней** разработчиков! Как это делает Express в мире JavaScript.
+
 ## 👀 Примеры
 
 Ниже перечислены некоторые из распространенных примеров. Если вы хотите увидеть больше примеров кода, пожалуйста, посетите наш [репозиторий рецептов](https://github.com/gofiber/recipes) или [документацию по API](https://fiber.wiki).
 
-### Serve static files
+### Роутинг
 
-```go
-func main() {
-  app := fiber.New()
+Документация:
 
-  app.Static("/public")
-  // => http://localhost:3000/js/script.js
-  // => http://localhost:3000/css/style.css
+- 📖 https://fiber.wiki/#basic-routing
 
-  app.Static("/prefix", "/public")
-  // => http://localhost:3000/prefix/js/script.js
-  // => http://localhost:3000/prefix/css/style.css
-
-  app.Static("*", "/public/index.html")
-  // => http://localhost:3000/any/path/shows/index/html
-
-  app.Listen(3000)
-}
-```
-
-### Routing
+Пример:
 
 ```go
 func main() {
@@ -167,7 +161,41 @@ func main() {
 }
 ```
 
-### Middleware & Next
+### Обслуживание статичных файлов
+
+Документация:
+
+- 📖 https://fiber.wiki/application#static
+
+Пример:
+
+```go
+func main() {
+  app := fiber.New()
+
+  app.Static("/public")
+  // => http://localhost:3000/js/script.js
+  // => http://localhost:3000/css/style.css
+
+  app.Static("/prefix", "/public")
+  // => http://localhost:3000/prefix/js/script.js
+  // => http://localhost:3000/prefix/css/style.css
+
+  app.Static("*", "/public/index.html")
+  // => http://localhost:3000/any/path/shows/index/html
+
+  app.Listen(3000)
+}
+```
+
+### Middleware и функция Next
+
+Документация:
+
+- 📖 https://fiber.wiki/routing#middleware
+- 📖 https://fiber.wiki/context#next
+
+Пример:
 
 ```go
 func main() {
@@ -196,18 +224,166 @@ func main() {
 ```
 
 <details>
-  <summary>📜 Show more code examples</summary>
+  <summary>📚 Показать больше примеров кода</summary>
 
-### Custom 404 response
+### Работа с шаблонами
+
+Документация:
+
+- 📖 https://fiber.wiki/application#settings
+- 📖 https://fiber.wiki/context#render
+
+Поддерживаемые движки шаблонов:
+
+- [html](https://golang.org/pkg/html/template/)
+- [amber](https://github.com/eknkc/amber)
+- [handlebars](https://github.com/aymerick/raymond)
+- [mustache](https://github.com/cbroglie/mustache)
+- [pug](https://github.com/Joker/jade)
+
+Пример:
+
+```go
+func main() {
+  // Вы можете настроить нужный движок для шаблонов 
+  // перед инициализацией приложения:
+  app := fiber.New(&fiber.Settings{
+    TemplateEngine:    "mustache",
+    TemplateFolder:    "./views",
+    TemplateExtension: ".tmpl",
+  })
+
+  // ИЛИ уже после инициализации приложения,
+  // в любом удобном месте:
+  app.Settings.TemplateEngine = "mustache"
+  app.Settings.TemplateFolder = "./views"
+  app.Settings.TemplateExtension = ".tmpl"
+
+  // Теперь, вы сможете вызывать шаблон `./views/home.tmpl` вот так:
+  app.Get("/", func(c *fiber.Ctx) {
+    c.Render("home", fiber.Map{
+      "title": "Homepage",
+      "year":  1999,
+    })
+  })
+  
+  // ...
+}
+```
+
+### Группировка роутов в цепочки
+
+Документация:
+
+- 📖 https://fiber.wiki/application#group
+
+Пример:
+
+```go
+func main() {
+  app := fiber.New()
+  
+  // Корневой API роут
+  api := app.Group("/api", cors())  // /api
+  
+  // Роуты для API v1
+  v1 := api.Group("/v1", mysql())   // /api/v1
+  v1.Get("/list", handler)          // /api/v1/list
+  v1.Get("/user", handler)          // /api/v1/user
+  
+  // Роуты для API v2
+  v2 := api.Group("/v2", mongodb()) // /api/v2
+  v2.Get("/list", handler)          // /api/v2/list
+  v2.Get("/user", handler)          // /api/v2/user
+  
+  // ...
+}
+```
+
+### Встроенный логгер
+
+Документация:
+
+- 📖 https://fiber.wiki/middleware#logger
+
+Пример:
+
+```go
+import (
+    "github.com/gofiber/fiber"
+    "github.com/gofiber/fiber/middleware"
+)
+
+func main() {
+    app := fiber.New()
+    
+    // Если вы хотите изменить конфигурацию логгера по умолчанию
+    loggerConfig := middleware.LoggerConfig{
+      Format:     "${time} - ${method} ${path}\n",
+      TimeFormat: "Mon, 2 Jan 2006 15:04:05 MST",
+    }
+
+    // Middleware для логгера с кастомным конфигом
+    app.Use(middleware.Logger(loggerConfig))
+
+    // ...
+}
+```
+
+### Cross-Origin Resource Sharing (CORS)
+
+Документация:
+
+- 📖 https://fiber.wiki/middleware#cors
+
+> [CORS](https://developer.mozilla.org/ru/docs/Web/HTTP/CORS) — это механизм, использующий дополнительные HTTP-заголовки, чтобы дать возможность агенту пользователя получать разрешения на доступ к выбранным ресурсам с сервера на источнике (домене), отличном от того, что сайт использует в данный момент.
+
+Пример:
+
+```go
+import (
+    "github.com/gofiber/fiber"
+    "github.com/gofiber/fiber/middleware"
+)
+
+func main() {
+    app := fiber.New()
+
+    // Подключаем CORS для каждого роута в качестве middleware
+    app.Use(middleware.CORS())
+
+    app.Get("/", func(c *fiber.Ctx) {
+        c.Send("CORS is enabled!")
+    })
+
+    app.Listen(3000)
+}
+```
+
+Проверьте работу CORS, передав любой домен в заголовке `Origin`: 
+
+```bash
+curl -H "Origin: http://example.com" --verbose http://localhost:3000
+```
+
+### Обработка 404 ошибки
+
+Документация:
+
+- 📖 https://fiber.wiki/application#http-methods
+
+Пример:
 
 ```go
 func main() {
   app := fiber.New()
 
   app.Static("/public")
+
   app.Get("/demo", func(c *fiber.Ctx) {
     c.Send("This is a demo!")
   })
+
   app.Post("/register", func(c *fiber.Ctx) {
     c.Send("Welcome!")
   })
@@ -221,7 +397,13 @@ func main() {
 }
 ```
 
-### JSON Response
+### Ответ в формате JSON
+
+Документация:
+
+- 📖 https://fiber.wiki/context#json
+
+Пример:
 
 ```go
 func main() {
@@ -242,8 +424,50 @@ func main() {
 }
 ```
 
+### Поддержка WebSocket
 
-### Recover from panic
+Документация:
+
+- 📖 https://fiber.wiki/application#websocket
+
+Пример:
+
+```go
+func main() {
+  app := fiber.New()
+
+  app.WebSocket("/ws/:name", func(c *fiber.Conn) {
+    log.Println(c.Params("name"))
+
+    for {
+      mt, msg, err := c.ReadMessage()
+      if err != nil {
+        log.Println("read:", err)
+        break
+      }
+
+      log.Printf("recovery: %s", msg)
+
+      err = c.WriteMessage(mt, msg)
+      if err != nil {
+        log.Println("write:", err)
+        break
+      }
+    }
+  })
+
+  // Слушаем вебсокет по адресу ws://localhost:3000/ws/john
+  app.Listen(3000)
+}
+```
+
+### Восстановление работы после `panic`
+
+Документация:
+
+- 📖 https://fiber.wiki/middleware#recover
+
+Пример:
 
 ```go
 func main() {
@@ -261,10 +485,14 @@ func main() {
   app.Listen(3000)
 }
 ```
+
 </details>
+
 ## 💬 Медиа
 
-- [Welcome to Fiber — an Express.js styled web framework written in Go with ❤️](https://dev.to/koddr/welcome-to-fiber-an-express-js-styled-fastest-web-framework-written-with-on-golang-497) *[Vic Shóstak](https://github.com/koddr), 3 февраля 2020 г.*
+- [Welcome to Fiber — an Express.js styled web framework written in Go with ❤️](https://dev.to/koddr/welcome-to-fiber-an-express-js-styled-fastest-web-framework-written-with-on-golang-497) (_by [Vic Shóstak](https://github.com/koddr), 03 Feb 2020_)
+- [Fiber release v1.7 is out now! 🎉 What's new and is he still fast, flexible and friendly?](https://dev.to/koddr/fiber-v2-is-out-now-what-s-new-and-is-he-still-fast-flexible-and-friendly-3ipf) (_by [Vic Shóstak](https://github.com/koddr), 21 Feb 2020_)
+- [🚀 Fiber v1.8. What's new, updated and re-thinked?](https://dev.to/koddr/fiber-v1-8-what-s-new-updated-and-re-thinked-339h) (_by [Vic Shóstak](https://github.com/koddr), 03 Mar 2020_)
 
 ## 👍 Помощь проекту
 
@@ -275,7 +503,7 @@ func main() {
 3. Сделайте обзор фреймворка на [Medium](https://medium.com/), [Dev.to](https://dev.to/) или в личном блоге.
 4. Помогите нам перевести `README` и [API](https://fiber.wiki/) на другой язык.
 
-## ☕ Supporters
+## ☕ Те, кто уже поддержал проект
 
 <a href="https://www.buymeacoffee.com/fenny" target="_blank">
   <img src="https://github.com/gofiber/docs/blob/master/static/buy-morning-coffee-3x.gif" alt="Buy Me A Coffee" height="100" >
@@ -291,7 +519,7 @@ func main() {
     <td align="center">
       <a href="https://github.com/koddr">
         <img src="https://avatars0.githubusercontent.com/u/11155743?s=460&v=4" width="100px"></br>
-        <sub><b>koddr</b></sub>
+        <sub><b>Vic&nbsp;Shóstak</b></sub>
       </a>
     </td>
     <td align="center">
@@ -305,6 +533,12 @@ func main() {
         <img src="https://avatars1.githubusercontent.com/u/31921460?s=460&v=4" width="100px"></br>
         <sub><b>ToishY</b></sub>
       </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/gofiber/fiber">
+          <img src="https://i.stack.imgur.com/frlIf.png" width="100px"></br>
+          <sub><b>JustDave</b></sub>
+        </a>
     </td>
   </tr>
 </table>
