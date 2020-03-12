@@ -10,3 +10,4 @@ jobs:
             - uses: Ynniss/golang-security-action@v0.1.0-rc.6
               with:
                   CODE_PATH: "./middleware/"
+                  CONF_PATH: "./gosec-conf.json"
