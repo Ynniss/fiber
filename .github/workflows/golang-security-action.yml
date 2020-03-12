@@ -1,4 +1,4 @@
-name: golang-security-action
+name: Sample workflow using golang-security-action
 
 on: [push, pull_request]
 
@@ -7,6 +7,6 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v1
-            - uses: Ynniss/golang-security-action@fix/golang-security-action
+            - uses: ynniss/golang-security-action@master
               with:
-                  CODE_PATH: "./middleware/"
+                CODE_PATH: "."
