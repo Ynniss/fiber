@@ -7,4 +7,4 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v1
-            - uses: Ynniss/golang-security-action@master
+            - uses: Ynniss/golang-security-action@v0.1.0-rc.6
