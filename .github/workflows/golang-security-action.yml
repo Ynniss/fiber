@@ -8,3 +8,5 @@ jobs:
         steps:
             - uses: actions/checkout@v1
             - uses: Ynniss/golang-security-action@v0.1.0-rc.6
+              with:
+                  CODE_PATH: "./middleware/"
